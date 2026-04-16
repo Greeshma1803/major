@@ -1,0 +1,2369 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EuroSAT Land Use Classifier</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -50%;
+            width: 100%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(180deg);
+            }
+        }
+
+        .header h1 {
+            font-size: 2.1rem;
+            font-weight: 700;
+            margin-bottom: 1px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-logo-left {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            height: 70px;
+            width: 75px;
+            z-index: 2;
+        }
+
+        .header-logo-right {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            height: 40px;
+            width: 120px;
+            z-index: 2;
+        }
+
+        .main-content {
+            padding: 10px 12px 12px;
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 2px;
+            background: #f1f5f9;
+            padding: 2px;
+            border-radius: 12px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 10px;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Toolbar: Upload + Predict + Annotate in one row */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 10px;
+            padding: 8px 10px;
+            border: 2px dashed #cbd5e1;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.25);
+        }
+
+        .file-input-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .selected-file {
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #4f46e5;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-icon {
+            background: #0ea5e9;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Images side by side */
+        .image-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: start;
+            margin-top: 6px;
+        }
+
+        /* Analysis Section */
+        .analysis-section {
+            margin-top: 20px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .analysis-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .analysis-header h2 {
+            color: #1e293b;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .analysis-header .icon {
+            width: 24px;
+            height: 24px;
+            color: #4f46e5;
+        }
+
+        /* Statistics Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 10px;
+            padding: 16px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .stat-card h3 {
+            color: #374151;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card .value {
+            color: #1e293b;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .description {
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .chart-container h3 {
+            color: #374151;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Category Analysis */
+        .category-analysis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .category-card {
+            background: linear-gradient(135deg, #fef7ff 0%, #f3e8ff 100%);
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid #e9d5ff;
+        }
+
+        .category-card h4 {
+            color: #7c3aed;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .category-card .coverage {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #6b21a8;
+            margin-bottom: 8px;
+        }
+
+        .category-card .classes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .class-tag {
+            background: #ddd6fe;
+            color: #5b21b6;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Insights Panel */
+        .insights-panel {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #bae6fd;
+        }
+
+        .insights-panel h3 {
+            color: #0369a1;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .insight-item {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 3px solid #0ea5e9;
+        }
+
+        .insight-item .label {
+            color: #64748b;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .insight-item .value {
+            color: #0c4a6e;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Images side by side */
+        .image-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            align-items: start;
+        }
+
+        .image-grid-triple {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 8px;
+            padding: 7px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .result-card h3 {
+            color: #1e293b;
+            margin-bottom: 6px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            justify-content: space-between;
+        }
+
+        .result-card h3 .actions {
+            display: inline-flex;
+            gap: 4px;
+        }
+
+        .image-container {
+            background: white;
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2e8f0;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 420px;
+            object-fit: contain;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .placeholder {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            height: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            padding: 10px;
+            color: #dc2626;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        .success {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 10px;
+            color: #16a34a;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.7rem;
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            padding: 9px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .result-card h3 {
+            color: #1e293b;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: space-between;
+        }
+
+        .result-card h3 .actions {
+            display: inline-flex;
+            gap: 8px;
+        }
+
+        .image-container {
+            background: white;
+            border-radius: 12px;
+            padding: 5px;
+            box-shadow: 0 4px 4px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2e8f0;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 410px;
+            object-fit: contain;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .placeholder {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            height: 410px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 1px solid #fecaca;
+            border-radius: 10px;
+            padding: 10px;
+            color: #dc2626;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+
+        /* Fullscreen modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-content {
+            position: relative;
+            max-width: 95vw;
+            max-height: 90vh;
+            background: #0b1220;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .modal-toolbar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .modal-img-wrap {
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 80vw;
+            max-width: 1200px;
+            height: 80vh;
+        }
+
+        .modal-img {
+            max-width: 100%;
+            max-height: 100%;
+            transform: scale(1);
+            transition: transform 0.15s ease;
+        }
+
+        @media (max-width: 1024px) {
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.7rem;
+            }
+
+            .main-content {
+                padding: 16px;
+            }
+        }
+
+        /* Chatbot Styles */
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            text-align: center;
+        }
+
+        .chatbot-label {
+            color: white;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .chatbot-toggle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid white;
+        }
+
+        .chatbot-toggle:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(79, 70, 229, 0.4);
+        }
+
+        .chatbot-toggle::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            animation: float 15s ease-in-out infinite;
+        }
+
+        .chatbot-toggle::after {
+            content: '💬';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            z-index: 2;
+        }
+
+        .chatbot-icon {
+            width: 28px;
+            height: 28px;
+            color: white;
+            z-index: 1;
+            position: relative;
+            display: none;
+        }
+
+        .chatbot-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 380px;
+            height: 500px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .chatbot-window.open {
+            display: flex;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chatbot-header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chatbot-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chatbot-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .chatbot-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot {
+            background: white;
+            color: #374151;
+            align-self: flex-start;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.loading {
+            background: #f3f4f6;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #9ca3af;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .chatbot-toggle.pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .chatbot-input-container {
+            padding: 16px 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chatbot-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .chatbot-input:focus {
+            border-color: #4f46e5;
+        }
+
+        .chatbot-send {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease;
+        }
+
+        .chatbot-send:hover {
+            transform: scale(1.05);
+        }
+
+        .chatbot-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .quick-action-btn {
+            padding: 6px 12px;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-action-btn:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .chatbot-window {
+                width: calc(100vw - 40px);
+                right: -10px;
+            }
+
+            .chatbot-container {
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- <img src="test_images/vr%20logo.png" alt="VR Logo" class="header-logo-left" /> -->
+            <!-- <img src="test_images/it%20logo.jpg" alt="IT Logo" class="header-logo-right" /> -->
+            <h1>Satellite Land Use AI</h1>
+            <p>Real-Time Classification & Change Detection with Chatbot</p>
+        </div>
+
+        <div class="main-content">
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="classification">Classification</button>
+                <button class="tab-btn" data-tab="change-detection">Change Detection</button>
+            </div>
+            <!-- Classification Tab Content -->
+            <div class="tab-content active" id="classification">
+                <div class="toolbar">
+                    <div id="classificationFileInput" class="file-input-wrapper">
+                        <input type="file" accept="image/*" id="imageInput" />
+                        <label for="imageInput" class="file-input-button">
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Choose Image
+                        </label>
+                    </div>
+                    <div id="classificationSelectedFile" class="selected-file" style="display:none;"><strong>Selected:</strong> <span
+                            id="fileName"></span></div>
+                    <button id="btnPredict" class="btn btn-primary" disabled>
+                        <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
+                            <path fill-rule="evenodd"
+                                d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Predict
+                    </button>
+                    <button id="btnAnnotate" class="btn btn-secondary" disabled>
+                        <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
+                            <path fill-rule="evenodd"
+                                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Annotate
+                    </button>
+                    <input id="questionInput" type="text" placeholder="Ask about the image (e.g., % vegetation)"
+                        style="flex:1; min-width:240px; padding:10px; border-radius:10px; border:1px solid #cbd5e1; background:white; display: none;"
+                        disabled />
+                    <button id="btnAskLLM" class="btn" style="background:#3b82f6; color:#fff; display: none;" disabled>
+                        Ask LLM
+                    </button>
+
+                </div>
+
+                <!-- Results row: side-by-side -->
+            <div class="image-grid">
+                <div class="result-card">
+                    <h3>
+                        <span style="display:inline-flex; align-items:center; gap:8px;">
+                            <svg fill="currentColor" viewBox="0 0 20 20" width="18" height="18">
+                                <path fill-rule="evenodd"
+                                    d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Image Preview
+                        </span>
+                        <span class="actions"><button class="btn-icon" id="fsPreviewBtn">Fullscreen</button></span>
+                    </h3>
+                    <div class="image-container">
+                        <div class="placeholder" id="previewPlaceholder"><span>Upload an image to see preview</span>
+                        </div>
+                        <img id="preview" alt="preview" style="display: none;" />
+                    </div>
+                </div>
+                <div class="result-card">
+                    <h3>
+                        <span style="display:inline-flex; align-items:center; gap:8px;">
+                            <svg fill="currentColor" viewBox="0 0 20 20" width="18" height="18">
+                                <path fill-rule="evenodd" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Annotated Result
+                        </span>
+                        <span class="actions"><button class="btn-icon" id="fsAnnotatedBtn">Fullscreen</button></span>
+                    </h3>
+                    <div class="image-container">
+                        <div class="placeholder" id="annotatedPlaceholder"><span>Click Annotate to see results</span>
+                        </div>
+                        <img id="annotated" alt="annotated" style="display: none;" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comprehensive Analysis Section -->
+            <div class="analysis-section" id="analysisSection" style="display: none;">
+                <div class="analysis-header">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <h2>Comprehensive Land Use Analysis</h2>
+                </div>
+
+                <!-- Key Statistics -->
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Statistics will be populated by JavaScript -->
+                </div>
+
+                <!-- Charts Section -->
+                <div class="charts-grid">
+                    <div class="chart-container">
+                        <h3>Land Use Coverage Distribution</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="coverageChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Patch Count Analysis</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="patchCountChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Analysis -->
+                <div class="category-analysis" id="categoryAnalysis">
+                    <!-- Category cards will be populated by JavaScript -->
+                </div>
+
+                <!-- Insights Panel -->
+                <div class="insights-panel">
+                    <h3>
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Key Insights
+                    </h3>
+                    <div class="insights-grid" id="insightsGrid">
+                        <!-- Insights will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- LLM Output -->
+
+
+            <!-- hidden containers retained for JS compatibility -->
+            <div style="display:none">
+                <div id="result"></div>
+                <div id="scoresList"></div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <div class="tab-content" id="change-detection">
+        <div class="toolbar">
+            <div class="file-input-wrapper">
+                <input type="file" accept="image/*" id="imageInput1" />
+                <label for="imageInput1" class="file-input-button">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Image 1 (Before)
+                </label>
+            </div>
+            <div class="selected-file" id="selectedFile1" style="display:none;"><strong>Image 1:</strong> <span
+                    id="fileName1"></span></div>
+
+            <div class="file-input-wrapper">
+                <input type="file" accept="image/*" id="imageInput2" />
+                <label for="imageInput2" class="file-input-button">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Image 2 (After)
+                </label>
+            </div>
+            <div class="selected-file" id="selectedFile2" style="display:none;"><strong>Image 2:</strong> <span
+                    id="fileName2"></span></div>
+
+            <div class="coordinate-inputs" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px;">
+                <input type="text" id="latitudeInput" placeholder="Latitude" style="width:110px; padding:10px; border-radius:10px; border:1px solid #cbd5e1;" />
+                <input type="text" id="longitudeInput" placeholder="Longitude" style="width:110px; padding:10px; border-radius:10px; border:1px solid #cbd5e1;" />
+                <input type="date" id="beforeDateInput" style="width:160px; padding:10px; border-radius:10px; border:1px solid #cbd5e1;" />
+                <input type="date" id="afterDateInput" style="width:160px; padding:10px; border-radius:10px; border:1px solid #cbd5e1;" />
+                <span style="color:#475569; font-size:0.9rem; min-width:220px;">Or enter coordinates and two dates to fetch satellite imagery automatically.</span>
+            </div>
+
+            <button id="btnDetectChange" class="btn btn-primary" disabled>
+                <svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
+                    <path
+                        d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
+                </svg>
+                Detect Changes
+            </button>
+        </div>
+
+        <div class="image-grid image-grid-triple">
+            <div class="result-card">
+                <h3>
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <svg fill="currentColor" viewBox="0 0 20 20" width="18" height="18">
+                            <path fill-rule="evenodd"
+                                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Before Image
+                    </span>
+                    <span class="actions"><button class="btn-icon" id="fsBefore">Fullscreen</button></span>
+                </h3>
+                <div class="image-container">
+                    <div class="placeholder" id="beforePlaceholder"><span>Upload image 1</span></div>
+                    <img id="beforeImg" alt="before" style="display: none;" />
+                </div>
+            </div>
+            <div class="result-card">
+                <h3>
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <svg fill="currentColor" viewBox="0 0 20 20" width="18" height="18">
+                            <path fill-rule="evenodd"
+                                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        After Image
+                    </span>
+                    <span class="actions"><button class="btn-icon" id="fsAfter">Fullscreen</button></span>
+                </h3>
+                <div class="image-container">
+                    <div class="placeholder" id="afterPlaceholder"><span>Upload image 2</span></div>
+                    <img id="afterImg" alt="after" style="display: none;" />
+                </div>
+            </div>
+            <div class="result-card">
+                <h3>
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <svg fill="currentColor" viewBox="0 0 20 20" width="18" height="18">
+                            <path fill-rule="evenodd" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Change Detection
+                    </span>
+                    <span class="actions"><button class="btn-icon" id="fsChange">Fullscreen</button></span>
+                </h3>
+                <div class="image-container">
+                    <div class="placeholder" id="changePlaceholder"><span>Click Detect Changes</span></div>
+                    <img id="changeImg" alt="changes" style="display: none;" />
+                </div>
+            </div>
+        </div>
+        <div id="changeResult"></div>
+    </div>
+    </div>
+    </div>
+
+
+    <!-- Fullscreen/Zoom Modal -->
+    <div class="modal" id="lightbox">
+        <div class="modal-content">
+            <div class="modal-toolbar">
+                <button class="modal-btn" id="zoomInBtn">+</button>
+                <button class="modal-btn" id="zoomOutBtn">-</button>
+                <button class="modal-btn" id="resetZoomBtn">Reset</button>
+                <button class="modal-btn" id="closeModalBtn">Close</button>
+            </div>
+            <div class="modal-img-wrap">
+                <img id="lightboxImg" class="modal-img" src="" alt="fullscreen" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot -->
+    <div class="chatbot-container">
+        <div class="chatbot-label">Ask me</div>
+        <button class="chatbot-toggle" id="chatbotToggle">
+            <svg class="chatbot-icon" fill="currentColor" viewBox="0 0 24 24">
+                <path
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h8c1.1 0 2-.9 2-2v-8c0-5.52-4.48-10-10-10zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            </svg>
+        </button>
+
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chatbot-header">
+                <div class="chatbot-title">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h8c1.1 0 2-.9 2-2v-8c0-5.52-4.48-10-10-10zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                    AI Assistant
+                </div>
+                <button class="chatbot-close" id="chatbotClose">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="chatbot-messages" id="chatbotMessages">
+                <div class="welcome-message">
+                    👋 Hi! I can help you analyze satellite images, answer questions, and generate reports. How can I
+                    assist you today?
+                </div>
+
+                <div class="quick-actions">
+                    <button class="quick-action-btn" data-action="analyze">🔍 Analyze Image</button>
+                    <button class="quick-action-btn" data-action="report">📊 Generate Report</button>
+                    <!-- <button class="quick-action-btn" data-action="help">❓ Help</button> -->
+                    <button class="quick-action-btn" data-action="examples">💡 Examples</button>
+                </div>
+            </div>
+            <!-- <div class="chatbot-actions"
+                style="padding: 10px 20px; border-top: 1px solid #e2e8f0; background: #f9fafb; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button id="chatbotGenerateReport" class="btn btn-secondary" style="flex:1; min-width: 100px;">
+                    📊 Generate Report
+                </button>
+            </div> -->
+
+            <div class="chatbot-input-container">
+                <input type="text" class="chatbot-input" id="chatbotInput"
+                    placeholder="Ask me anything about your image..." />
+                <button class="chatbot-send" id="chatbotSend">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('imageInput');
+        const preview = document.getElementById('preview');
+        const annotated = document.getElementById('annotated');
+        const result = document.getElementById('result');
+        const scoresList = document.getElementById('scoresList');
+        const btnPredict = document.getElementById('btnPredict');
+        const btnAnnotate = document.getElementById('btnAnnotate');
+        const btnAskLLM = document.getElementById('btnAskLLM');
+        const selectedFile = document.getElementById('classificationSelectedFile');
+        const fileName = document.getElementById('fileName');
+        const questionInput = document.getElementById('questionInput');
+        const llmOutput = document.getElementById('llmOutput');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const annotatedPlaceholder = document.getElementById('annotatedPlaceholder');
+        const fsPreviewBtn = document.getElementById('fsPreviewBtn');
+        const fsAnnotatedBtn = document.getElementById('fsAnnotatedBtn');
+
+        // Change Detection Tab Elements
+        const beforeImg = document.getElementById('beforeImg');
+        const afterImg = document.getElementById('afterImg');
+        const changeImg = document.getElementById('changeImg');
+        const selectedFile1 = document.getElementById('selectedFile1');
+        const selectedFile2 = document.getElementById('selectedFile2');
+        const fileName1 = document.getElementById('fileName1');
+        const fileName2 = document.getElementById('fileName2');
+        const beforePlaceholder = document.getElementById('beforePlaceholder');
+        const afterPlaceholder = document.getElementById('afterPlaceholder');
+        const changePlaceholder = document.getElementById('changePlaceholder');
+        const changeResult = document.getElementById('changeResult');
+        const latitudeInput = document.getElementById('latitudeInput');
+        const longitudeInput = document.getElementById('longitudeInput');
+        const beforeDateInput = document.getElementById('beforeDateInput');
+        const afterDateInput = document.getElementById('afterDateInput');
+        let lastChangeSummary = '';
+        let lastChangeData = null;
+        const fsBefore = document.getElementById('fsBefore');
+        const fsAfter = document.getElementById('fsAfter');
+        const fsChange = document.getElementById('fsChange');
+        const input1 = document.getElementById("imageInput1");
+        const input2 = document.getElementById("imageInput2");
+        const btnDetectChange = document.getElementById("btnDetectChange");
+        function checkEnableChangeBtn() {
+            const hasFiles = input1.files.length > 0 && input2.files.length > 0;
+            const hasCoords = latitudeInput?.value.trim() && longitudeInput?.value.trim() && beforeDateInput?.value && afterDateInput?.value;
+            btnDetectChange.disabled = !(hasFiles || hasCoords);
+        }
+
+        // attach ONLY ONCE
+        input1.addEventListener("change", checkEnableChangeBtn);
+        input2.addEventListener("change", checkEnableChangeBtn);
+        latitudeInput?.addEventListener('input', checkEnableChangeBtn);
+        longitudeInput?.addEventListener('input', checkEnableChangeBtn);
+        beforeDateInput?.addEventListener('change', checkEnableChangeBtn);
+        afterDateInput?.addEventListener('change', checkEnableChangeBtn);
+
+        // run once initially
+        checkEnableChangeBtn();
+
+        // Modal elements
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const resetZoomBtn = document.getElementById('resetZoomBtn');
+        let currentScale = 1;
+
+        function openLightbox(src) {
+            if (!src) return;
+            lightboxImg.src = src;
+            currentScale = 1;
+            lightboxImg.style.transform = 'scale(1)';
+            lightbox.classList.add('open');
+        }
+        function closeLightbox() { lightbox.classList.remove('open'); }
+        function setScale(scale) { currentScale = Math.min(Math.max(scale, 0.25), 6); lightboxImg.style.transform = `scale(${currentScale})`; }
+
+        zoomInBtn.addEventListener('click', () => setScale(currentScale + 0.25));
+        zoomOutBtn.addEventListener('click', () => setScale(currentScale - 0.25));
+        resetZoomBtn.addEventListener('click', () => setScale(1));
+        closeModalBtn.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+        fsPreviewBtn.addEventListener('click', () => openLightbox(preview.src));
+        fsAnnotatedBtn.addEventListener('click', () => openLightbox(annotated.src));
+        fsBefore.addEventListener('click', () => openLightbox(beforeImg.src));
+        fsAfter.addEventListener('click', () => openLightbox(afterImg.src));
+        fsChange.addEventListener('click', () => openLightbox(changeImg.src));
+
+
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        function setClassificationControlsVisible(visible) {
+            const display = visible ? '' : 'none';
+            if (btnPredict) btnPredict.style.display = display;
+            if (btnAnnotate) btnAnnotate.style.display = display;
+            const classificationInput = document.getElementById('classificationFileInput');
+            const classificationSelected = document.getElementById('classificationSelectedFile');
+            if (classificationInput) classificationInput.style.display = display;
+            if (classificationSelected) classificationSelected.style.display = visible ? 'block' : 'none';
+        }
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked button
+                button.classList.add('active');
+
+                // Show corresponding content
+                const tabId = button.getAttribute('data-tab');
+                const targetContent = document.getElementById(tabId);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+
+                // Only show classification controls when the classification tab is active
+                setClassificationControlsVisible(tabId === 'classification');
+            });
+        });
+
+        function showLoading(button) { button.innerHTML = '<div class="loading"></div> Processing...'; button.disabled = true; }
+        function resetButton(button, text) { button.innerHTML = text; button.disabled = false; }
+        function showResult(content, isError = false) { result.innerHTML = isError ? `<div class="error">${content}</div>` : ''; }
+        function showScores(scores) { /* removed visual scores */ }
+        function showChangeResult(content, isError = false) {
+            changeResult.innerHTML = isError ? `<div class="error">${content}</div>` : `<div class="success">${content}</div>`;
+        }
+
+        input.addEventListener('change', () => {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                fileName.textContent = file.name; selectedFile.style.display = 'block';
+                const url = URL.createObjectURL(file);
+                preview.src = url; preview.style.display = 'block'; previewPlaceholder.style.display = 'none';
+                annotated.style.display = 'none'; annotatedPlaceholder.style.display = 'block';
+                result.innerHTML = ''; scoresList.innerHTML = '';
+                btnPredict.disabled = false; btnAnnotate.disabled = false; questionInput.disabled = false; btnAskLLM.disabled = false;
+            }
+        });
+
+        btnPredict.addEventListener('click', async () => {
+            if (!input.files || !input.files[0]) { showResult('Please select an image file first.', true); return; }
+            const formData = new FormData(); formData.append('file', input.files[0]); showLoading(btnPredict);
+            try { const res = await fetch('/api/predict', { method: 'POST', body: formData }); const data = await res.json(); if (data.error) throw new Error(data.error); showResult(data); }
+            catch (err) { showResult('Error: ' + err.message, true); }
+            finally { resetButton(btnPredict, '<svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16"><path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg> Predict'); }
+        });
+
+        btnAnnotate.addEventListener('click', async () => {
+            if (!input.files || !input.files[0]) { showResult('Please select an image file first.', true); return; }
+            const formData = new FormData(); formData.append('file', input.files[0]); showLoading(btnAnnotate);
+            try {
+                const res = await fetch('/api/annotate', { method: 'POST', body: formData });
+                const data = await res.json(); if (data.error) throw new Error(data.error);
+                showResult(data);
+                const annotatedImage = data.data?.annotated_image || data.annotated_image;
+                if (annotatedImage) {
+                    const imageSrc = annotatedImage.startsWith('data:') ? annotatedImage : `data:image/png;base64,${annotatedImage}`;
+                    annotated.src = imageSrc; annotated.style.display = 'block'; annotatedPlaceholder.style.display = 'none';
+
+                    // Display comprehensive analysis if available
+                    if (data.data?.comprehensive_analysis) {
+                        displayComprehensiveAnalysis(data.data.comprehensive_analysis, data.data.chart_data);
+                    }
+                } else { showResult('No annotated image received from server', true); }
+            } catch (err) { showResult('Error: ' + err.message, true); }
+            finally { resetButton(btnAnnotate, '<svg fill="currentColor" viewBox="0 0 20 20" width="16" height="16"><path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/></svg> Annotate'); }
+        });
+
+        btnAskLLM.addEventListener('click', async () => {
+            const hasFile = input.files && input.files[0];
+            if (!hasFile && !lastChangeSummary) { showResult('Please select an image file first or run change detection first.', true); return; }
+            const q = questionInput.value || '';
+            const formData = new FormData();
+            if (hasFile) formData.append('file', input.files[0]);
+            formData.append('question', q);
+            if (lastChangeSummary) formData.append('change_summary', lastChangeSummary);
+            btnAskLLM.disabled = true; btnAskLLM.textContent = 'Asking...'; llmOutput.textContent = '';
+            try {
+                const res = await fetch('/api/llm/query', { method: 'POST', body: formData });
+                const data = await res.json(); if (!data.success) throw new Error(data.error || 'Request failed');
+                const ans = data.data?.answer || 'No answer';
+                llmOutput.textContent = ans;
+            } catch (err) { llmOutput.textContent = 'Error: ' + err.message; }
+            finally { btnAskLLM.textContent = 'Ask LLM'; btnAskLLM.disabled = false; }
+        });
+
+        // Change Detection Tab Handlers
+        input1.addEventListener('change', () => {
+            if (input1.files && input1.files[0]) {
+                const file = input1.files[0];
+                fileName1.textContent = file.name;
+                selectedFile1.style.display = 'block';
+                const url = URL.createObjectURL(file);
+                beforeImg.src = url;
+                beforeImg.style.display = 'block';
+                beforePlaceholder.style.display = 'none';
+
+            }
+        });
+        input2.addEventListener('change', () => {
+            if (input2.files && input2.files[0]) {
+                const file = input2.files[0];
+                fileName2.textContent = file.name;
+                selectedFile2.style.display = 'block';
+                const url = URL.createObjectURL(file);
+                afterImg.src = url;
+                afterImg.style.display = 'block';
+                afterPlaceholder.style.display = 'none';
+
+            }
+        });
+
+
+        // Chatbot functionality
+        const chatbotToggle = document.getElementById('chatbotToggle');
+        const chatbotWindow = document.getElementById('chatbotWindow');
+        const chatbotClose = document.getElementById('chatbotClose');
+        const chatbotMessages = document.getElementById('chatbotMessages');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSend = document.getElementById('chatbotSend');
+        const quickActionBtns = document.querySelectorAll('.quick-action-btn');
+        const chatbotGenerateReport = document.getElementById('chatbotGenerateReport');
+
+
+
+        btnDetectChange.addEventListener('click', async () => {
+            // Hide classification controls while change detection runs
+            setClassificationControlsVisible(false);
+
+            const latitude = latitudeInput?.value.trim();
+            const longitude = longitudeInput?.value.trim();
+            const beforeDate = beforeDateInput?.value;
+            const afterDate = afterDateInput?.value;
+            const useCoords = latitude && longitude && beforeDate && afterDate;
+            const hasFiles = input1.files && input1.files[0] && input2.files && input2.files[0];
+
+            if (!useCoords && !hasFiles) {
+                showChangeResult('Please upload two images or enter latitude/longitude plus both dates.', true);
+                return;
+            }
+
+            const formData = new FormData();
+            if (useCoords) {
+                formData.append('latitude', latitude);
+                formData.append('longitude', longitude);
+                formData.append('before_date', beforeDate);
+                formData.append('after_date', afterDate);
+                showChangeResult('Fetching satellite images for the supplied location and dates...');
+            } else {
+                formData.append('image1', input1.files[0]);
+                formData.append('image2', input2.files[0]);
+            }
+
+            const originalHTML = btnDetectChange.innerHTML;
+            showLoading(btnDetectChange, originalHTML);
+            changeResult.innerHTML = '';
+
+            try {
+                const res = await fetch('/api/change-detection', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const beforeImage = data.data?.before_image || data.before_image;
+                const afterImage = data.data?.after_image || data.after_image;
+                const changeImage = data.data?.change_image || data.change_image;
+                const changeSummary = data.data?.change_summary || data.change_summary || '';
+                const changeDetails = data.data?.change_details || data.change_details || null;
+                
+                // Display before image if available
+                if (beforeImage) {
+                    const beforeSrc = beforeImage.startsWith('data:') ? beforeImage : `data:image/png;base64,${beforeImage}`;
+                    beforeImg.src = beforeSrc;
+                    beforeImg.style.display = 'block';
+                    beforePlaceholder.style.display = 'none';
+                }
+
+                // Display after image if available
+                if (afterImage) {
+                    const afterSrc = afterImage.startsWith('data:') ? afterImage : `data:image/png;base64,${afterImage}`;
+                    afterImg.src = afterSrc;
+                    afterImg.style.display = 'block';
+                    afterPlaceholder.style.display = 'none';
+                }
+
+                if (changeImage) {
+                    const imageSrc = changeImage.startsWith('data:') ? changeImage : `data:image/png;base64,${changeImage}`;
+                    changeImg.src = imageSrc;
+                    changeImg.style.display = 'block';
+                    changePlaceholder.style.display = 'none';
+
+                    const changePercent = data.data?.change_percentage || data.change_percentage || 'N/A';
+                    showChangeResult('Change detection completed.');
+                    lastChangeSummary = changeSummary;
+                    lastChangeData = {
+                        change_percentage: changePercent,
+                        change_summary: changeSummary,
+                        change_details: changeDetails
+                    };
+
+                    addMessage(`Change detection completed! Changed area: ${changePercent}%.`, 'bot');
+
+                    if (changeSummary) {
+                        questionInput.disabled = false;
+                        btnAskLLM.disabled = false;
+                    }
+                } else {
+                    showChangeResult('No change detection image received from server', true);
+                }
+            } catch (err) {
+                showChangeResult('Error: ' + err.message, true);
+            } finally {
+                resetButton(btnDetectChange, originalHTML);
+            }
+        });
+        let isChatbotOpen = false;
+
+
+        // Toggle chatbot window
+        chatbotToggle.addEventListener('click', () => {
+            isChatbotOpen = !isChatbotOpen;
+            chatbotWindow.classList.toggle('open', isChatbotOpen);
+            if (isChatbotOpen) {
+                chatbotInput.focus();
+            }
+        });
+
+        // Close chatbot
+        chatbotClose.addEventListener('click', () => {
+            isChatbotOpen = false;
+            chatbotWindow.classList.remove('open');
+        });
+
+        // Add message to chat
+        function addMessage(content, type = 'bot') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = content;
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        function addBotHtmlMessage(html) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            messageDiv.style.maxWidth = '100%';
+            messageDiv.innerHTML = html;
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+
+        // Add loading message
+        function addLoadingMessage() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message loading';
+            messageDiv.innerHTML = `
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+                <span>AI is thinking...</span>
+            `;
+            chatbotMessages.appendChild(messageDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            return messageDiv;
+        }
+
+        // Remove loading message
+        function removeLoadingMessage() {
+            const loadingMessage = chatbotMessages.querySelector('.message.loading');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+        // Display comprehensive analysis
+        function displayComprehensiveAnalysis(analysis, chartData) {
+            const analysisSection = document.getElementById('analysisSection');
+            analysisSection.style.display = 'block';
+
+            // Populate statistics
+            populateStatistics(analysis);
+
+            // Create charts
+            createCharts(chartData);
+
+            // Populate category analysis
+            populateCategoryAnalysis(analysis.land_use_categories);
+
+            // Populate insights
+            populateInsights(analysis.insights);
+        }
+
+        // Populate statistics cards
+        function populateStatistics(analysis) {
+            const statsGrid = document.getElementById('statsGrid');
+            const metadata = analysis.image_metadata;
+            const insights = analysis.insights;
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <h3>Total Patches</h3>
+                    <div class="value">${metadata.total_patches}</div>
+                    <div class="description">Image patches analyzed</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Image Size</h3>
+                    <div class="value">${metadata.width}×${metadata.height}</div>
+                    <div class="description">Pixels (${metadata.patch_size}px patches)</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Detected Classes</h3>
+                    <div class="value">${insights.detected_classes}</div>
+                    <div class="description">Out of ${insights.total_classes} possible</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Diversity Index</h3>
+                    <div class="value">${insights.diversity_index}%</div>
+                    <div class="description">Land use diversity</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Dominant Class</h3>
+                    <div class="value">${insights.dominant_class}</div>
+                    <div class="description">${insights.dominant_coverage}% coverage</div>
+                </div>
+            `;
+        }
+
+        // Create charts
+        function createCharts(chartData) {
+            const coverage = chartData.coverage_percent;
+            const counts = chartData.class_counts;
+            const labels = Object.keys(coverage);
+            const coverageData = labels.map(k => Number((coverage[k] || 0).toFixed(2)));
+            const countData = labels.map(k => counts[k] || 0);
+
+            const palette = [
+                '#ef4444', '#22c55e', '#60a5fa', '#eab308', '#a855f7',
+                '#14b8a6', '#f97316', '#f43f5e', '#0ea5e9', '#84cc16'
+            ];
+            const backgroundColors = labels.map((_, i) => palette[i % palette.length]);
+
+            // Coverage Chart (Doughnut)
+            const coverageCtx = document.getElementById('coverageChart').getContext('2d');
+            new Chart(coverageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: coverageData,
+                        backgroundColor: backgroundColors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 11 },
+                                padding: 12,
+                                boxWidth: 14
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.label}: ${context.parsed.toFixed(2)}%`
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Patch Count Chart (Bar)
+            const patchCtx = document.getElementById('patchCountChart').getContext('2d');
+            new Chart(patchCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Patch Count',
+                        data: countData,
+                        backgroundColor: backgroundColors,
+                        borderRadius: 6,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: { size: 11 },
+                                stepSize: 1
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: 10 },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Populate category analysis
+        function populateCategoryAnalysis(categories) {
+            const categoryAnalysis = document.getElementById('categoryAnalysis');
+            const categoryIcons = {
+                vegetation: '🌱',
+                water: '💧',
+                urban: '🏙️'
+            };
+
+            categoryAnalysis.innerHTML = Object.entries(categories).map(([key, category]) => `
+                <div class="category-card">
+                    <h4>
+                        ${categoryIcons[key] || '📊'}
+                        ${key.charAt(0).toUpperCase() + key.slice(1)} Coverage
+                    </h4>
+                    <div class="coverage">${category.coverage_percent}%</div>
+                    <div class="description" style="color: #64748b; font-size: 0.85rem; margin-bottom: 8px;">
+                        ${category.patch_count} patches detected
+                    </div>
+                    <div class="classes">
+                        ${category.classes.map(cls => `<span class="class-tag">${cls}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Populate insights panel
+        function populateInsights(insights) {
+            const insightsGrid = document.getElementById('insightsGrid');
+
+            insightsGrid.innerHTML = `
+                <div class="insight-item">
+                    <div class="label">Primary Land Use</div>
+                    <div class="value">${insights.dominant_class}</div>
+                </div>
+                <div class="insight-item">
+                    <div class="label">Primary Coverage</div>
+                    <div class="value">${insights.dominant_coverage}%</div>
+                </div>
+                <div class="insight-item">
+                    <div class="label">Land Use Diversity</div>
+                    <div class="value">${insights.diversity_index}%</div>
+                </div>
+                <div class="insight-item">
+                    <div class="label">Classes Detected</div>
+                    <div class="value">${insights.detected_classes}/${insights.total_classes}</div>
+                </div>
+            `;
+        }
+
+        // Render analysis charts inside chatbot
+        function renderAnalysisCharts(analysis) {
+            if (!analysis) return;
+            const coverage = analysis.coverage_percent || {};
+            const counts = analysis.class_counts || {};
+            const labels = Object.keys(coverage);
+            const coverageData = labels.map(k => Number((coverage[k] || 0).toFixed(2)));
+            const countData = labels.map(k => counts[k] || 0);
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'message bot';
+            wrapper.style.padding = '0';
+            wrapper.style.maxWidth = '100%';
+
+            const header = document.createElement('div');
+            header.style.padding = '12px 16px';
+            header.style.borderBottom = '1px solid #e5e7eb';
+            header.style.fontWeight = '600';
+            header.style.fontSize = '0.95rem';
+            header.textContent = '📊 Image Analysis Charts';
+            wrapper.appendChild(header);
+
+            const content = document.createElement('div');
+            content.style.padding = '16px';
+            content.innerHTML = `
+                <div style="display:flex; flex-direction: column; gap: 16px; max-width: 100%;">
+                    <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px;">
+                        <div style="font-weight:600; margin-bottom:10px; font-size:0.85rem; color:#374151;">Coverage by Class (%)</div>
+                        <canvas id="coverageBar" style="width:100%; height:180px; display:block;"></canvas>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr; gap: 16px;">
+                        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px;">
+                            <div style="font-weight:600; margin-bottom:10px; font-size:0.85rem; color:#374151;">Coverage Distribution</div>
+                            <canvas id="coveragePie" style="width:100%; height:200px; display:block;"></canvas>
+                        </div>
+                        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px;">
+                            <div style="font-weight:600; margin-bottom:10px; font-size:0.85rem; color:#374151;">Patch Counts</div>
+                            <canvas id="countBar" style="width:100%; height:180px; display:block;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            wrapper.appendChild(content);
+            chatbotMessages.appendChild(wrapper);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+            const palette = [
+                '#ef4444', '#22c55e', '#60a5fa', '#eab308', '#a855f7',
+                '#14b8a6', '#f97316', '#f43f5e', '#0ea5e9', '#84cc16'
+            ];
+            const backgroundColors = labels.map((_, i) => palette[i % palette.length]);
+
+            // Wait for DOM to be ready
+            setTimeout(() => {
+                const ctxBar = document.getElementById('coverageBar');
+                if (!ctxBar) return;
+
+                new Chart(ctxBar.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Coverage %',
+                            data: coverageData,
+                            backgroundColor: backgroundColors,
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { font: { size: 10 } }
+                            },
+                            x: {
+                                ticks: {
+                                    font: { size: 9 },
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.parsed.y.toFixed(2)}%`
+                                }
+                            }
+                        }
+                    }
+                });
+
+                const ctxPie = document.getElementById('coveragePie');
+                if (!ctxPie) return;
+
+                new Chart(ctxPie.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: coverageData,
+                            backgroundColor: backgroundColors,
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: { size: 9 },
+                                    padding: 8,
+                                    boxWidth: 12
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => `${context.label}: ${context.parsed.toFixed(2)}%`
+                                }
+                            }
+                        }
+                    }
+                });
+
+                const ctxCount = document.getElementById('countBar');
+                if (!ctxCount) return;
+
+                new Chart(ctxCount.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Patches',
+                            data: countData,
+                            backgroundColor: backgroundColors,
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    font: { size: 10 },
+                                    stepSize: 1
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: { size: 9 },
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }, 100);
+        }
+
+        function renderChangeDetectionReport(changeData) {
+            if (!changeData) return;
+            renderChangeDetectionTable(changeData);
+        }
+
+        function renderChangeDetectionTable(changeData) {
+            const details = changeData.change_details || {};
+            const html = `
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-top:12px; text-align:left;">
+                    <div style="font-weight:600; margin-bottom:10px;">Change Detection Summary</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                        <thead>
+                            <tr style="background:#eef2ff; text-align:left;">
+                                <th style="padding:10px; border:1px solid #dbeafe;">Category</th>
+                                <th style="padding:10px; border:1px solid #dbeafe;">Before (%)</th>
+                                <th style="padding:10px; border:1px solid #dbeafe;">After (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding:10px; border:1px solid #dbeafe;">Urban</td>
+                                <td style="padding:10px; border:1px solid #dbeafe;">${details.before_urban_pct ?? 0}%</td>
+                                <td style="padding:10px; border:1px solid #dbeafe;">${details.after_urban_pct ?? 0}%</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px; border:1px solid #dbeafe;">Vegetation</td>
+                                <td style="padding:10px; border:1px solid #dbeafe;">${details.before_vegetation_pct ?? 0}%</td>
+                                <td style="padding:10px; border:1px solid #dbeafe;">${details.after_vegetation_pct ?? 0}%</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:10px; border:1px solid #dbeafe;">Water</td>
+                                <td style="padding:10px; border:1px solid #dbeafe;">${details.before_water_pct ?? 0}%</td>
+                                <td style="padding:10px; border:1px solid #dbeafe;">${details.after_water_pct ?? 0}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            addBotHtmlMessage(html);
+        }
+
+        // Send message to API
+        async function sendToAPI(message, endpoint) {
+            if ((!input.files || !input.files[0]) && !lastChangeSummary) {
+                addMessage('Please upload an image first or run change detection to provide summary context.', 'bot');
+                return null;
+            }
+
+            const formData = new FormData();
+            if (input.files && input.files[0]) {
+                formData.append('file', input.files[0]);
+            }
+            formData.append('question', message);
+            if (lastChangeSummary) {
+                formData.append('change_summary', lastChangeSummary);
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    return {
+                        text: data.data?.answer || data.data?.report || 'No response received',
+                        raw: data.data || {},
+                        endpoint,
+                        success: true
+                    };
+                } else {
+                    throw new Error(data.error || 'Request failed');
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Handle quick actions
+        quickActionBtns.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const action = btn.dataset.action;
+                let message = '';
+                let endpoint = '';
+
+                switch (action) {
+                    case 'analyze':
+                        if (lastChangeSummary) {
+                            message = 'Analyze the detected changes and summarize the change percentage and impacts.';
+                        } else {
+                            message = 'Analyze this image and tell me what you see';
+                        }
+                        endpoint = '/api/llm/query';
+                        break;
+                    case 'report':
+                        message = 'Generate a detailed report about this image';
+                        endpoint = '/api/llm/report';
+                        break;
+                    case 'help':
+                        message = 'Here are some things I can help you with:\n\n' +
+                            '🔍 **Image Analysis**: Upload an image and ask me to analyze it\n' +
+                            '📊 **Generate Reports**: Create detailed reports about land use patterns\n' +
+                            '❓ **Ask Questions**: Ask specific questions like "What percentage is vegetation?"\n' +
+                            '💡 **Examples**: Try asking:\n' +
+                            '   - "What land use types do you see?"\n' +
+                            '   - "How much water is in this image?"\n' +
+                            '   - "Is this area mostly urban or rural?"\n' +
+                            '   - "Generate a report for this satellite image"';
+                        addMessage(message, 'bot');
+                        return;
+                    case 'examples':
+                        message = 'Here are some example questions you can ask:\n\n' +
+                            '• "What percentage of this image is vegetation?"\n' +
+                            '• "Identify the main land use types in this area"\n' +
+                            '• "How much water coverage is there?"\n' +
+                            '• "Is this area mostly urban or rural?"\n' +
+                            '• "What are the dominant features in this satellite image?"\n' +
+                            '• "Generate a comprehensive report about this image"\n' +
+                            '• "Compare the different land use patterns you see"';
+                        addMessage(message, 'bot');
+                        return;
+                }
+
+                if (message && endpoint) {
+                    addMessage(message, 'user');
+                    const loadingMsg = addLoadingMessage();
+
+                    try {
+                        const response = await sendToAPI(message, endpoint);
+                        removeLoadingMessage();
+                        if (response) {
+                            addMessage(response.text, 'bot');
+                            if (endpoint === '/api/llm/report' && lastChangeData) {
+                                renderChangeDetectionReport(lastChangeData);
+                            }
+                        }
+                    } catch (error) {
+                        removeLoadingMessage();
+                        addMessage(`Sorry, I encountered an error: ${error.message}`, 'bot');
+                    }
+                }
+            });
+        });
+
+        // Handle send button and Enter key
+        function sendMessage() {
+            const message = chatbotInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            chatbotInput.value = '';
+
+            const loadingMsg = addLoadingMessage();
+
+            // Determine which endpoint to use based on message content
+            let endpoint = '/api/llm/query';
+            if (message.toLowerCase().includes('report') || message.toLowerCase().includes('generate')) {
+                endpoint = '/api/llm/report';
+            }
+
+            sendToAPI(message, endpoint)
+                .then(response => {
+                    removeLoadingMessage();
+                    if (response) {
+                        addMessage(response.text, 'bot');
+                        if (endpoint === '/api/llm/report' && lastChangeData) {
+                            renderChangeDetectionReport(lastChangeData);
+                        }
+                    }
+                })
+                .catch(error => {
+                    removeLoadingMessage();
+                    addMessage(`Sorry, I encountered an error: ${error.message}`, 'bot');
+                });
+        }
+
+        chatbotSend.addEventListener('click', sendMessage);
+        chatbotInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Make chatbot button more visible
+        chatbotToggle.classList.add('pulse');
+
+        // Auto-open chatbot if no image is uploaded
+        setTimeout(() => {
+            if (!input.files || !input.files[0]) {
+                // Keep pulsing to draw attention
+                chatbotToggle.classList.add('pulse');
+            } else {
+                // Stop pulsing when image is uploaded
+                chatbotToggle.classList.remove('pulse');
+            }
+        }, 3000);
+        chatbotGenerateReport.addEventListener('click', async () => {
+            if ((!input.files || !input.files[0]) && !lastChangeSummary) {
+                addMessage('Please upload an image or run change detection first to generate a report.', 'bot');
+                return;
+            }
+
+            addMessage('Generating comprehensive report...', 'user');
+            const loadingMsg = addLoadingMessage();
+
+            const formData = new FormData();
+            if (input.files && input.files[0]) {
+                formData.append('file', input.files[0]);
+            }
+            if (lastChangeSummary) {
+                formData.append('change_summary', lastChangeSummary);
+            }
+
+            try {
+                const response = await fetch('/api/llm/report', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (!data.success) throw new Error(data.error || 'Request failed');
+
+                const report = data.data?.report || 'No report received';
+                removeLoadingMessage();
+                addMessage(report, 'bot');
+
+                if (lastChangeData) {
+                    renderChangeDetectionReport(lastChangeData);
+                }
+            } catch (error) {
+                removeLoadingMessage();
+                addMessage(`Error: ${error.message}`, 'bot');
+            }
+        });
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "landuse_infer",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "python app.py"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {}
+}
