@@ -117,12 +117,16 @@ python app.py
 * Helps in environmental monitoring and urban planning
 
 <img width="1246" height="624" alt="image" src="https://github.com/user-attachments/assets/1326199a-d232-4999-8b92-ffe1ffa2685f" />
+Fig: Dashboard showing change detection output by manually uploading satellite data of two different time periods
+
+
 <img width="1259" height="630" alt="image" src="https://github.com/user-attachments/assets/39aa30a3-e974-429a-9e2a-8067f3a6d7d4" />
+Fig: U-Net Change Detection Output by taking image directly from NASA GIBS (Long:26.6139, Lat:77.2090, Date1:05-04-2026 ,Date2:11-04-2026)
+
+
 <img width="1278" height="639" alt="image" src="https://github.com/user-attachments/assets/4618d533-6214-444c-80b4-d210f253f19f" />
 Fig: Classification Output on segmented image
 
-
-![Uploading image.png…]()
 
 
 ---
