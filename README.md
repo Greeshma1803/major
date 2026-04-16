@@ -1,4 +1,6 @@
-# 🌍 Land Use Change Detection with SAM & U-Net
+# 🌍GeoVision AI: LLM-Powered Satellite Image Analysis & Change Detection System
+
+
 
 ## 📌 Overview
 
