@@ -116,9 +116,12 @@ python app.py
 * Provides segmented output maps
 * Helps in environmental monitoring and urban planning
 
-👉 <img width="1246" height="624" alt="image" src="https://github.com/user-attachments/assets/1326199a-d232-4999-8b92-ffe1ffa2685f" />
+<img width="1246" height="624" alt="image" src="https://github.com/user-attachments/assets/1326199a-d232-4999-8b92-ffe1ffa2685f" />
 <img width="1259" height="630" alt="image" src="https://github.com/user-attachments/assets/39aa30a3-e974-429a-9e2a-8067f3a6d7d4" />
 <img width="1278" height="639" alt="image" src="https://github.com/user-attachments/assets/4618d533-6214-444c-80b4-d210f253f19f" />
+Fig: Classification Output on segmented image
+
+
 ![Uploading image.png…]()
 
 
